@@ -20,7 +20,7 @@ import {
 
 /* ═══ Types ═══ */
 type Level = "Bronze" | "Prata" | "Ouro";
-type Category = "Processos & Sistemas" | "Redação Oficial" | "Legislação & Normas";
+type Category = "Coordenação" | "Gestão de Pessoal" | "Outros";
 
 interface Subtema {
   id: number | string;
@@ -38,12 +38,17 @@ interface Subtema {
 
 /** Converte registro do Supabase para o formato local */
 function fromDB(row: DBSubtheme): Subtema {
+  // Mapeia categorias do banco para o tipo local
+  const catMap: Record<string, Category> = {
+    "Coordenação":       "Coordenação",
+    "Gestão de Pessoal": "Gestão de Pessoal",
+  };
   return {
     id: row.id,
     name: row.name,
     level: row.level as Level,
     hours: Number(row.hours),
-    category: (row.category === "SIPAT" ? "Legislação & Normas" : row.category === "Combate a Incêndio" ? "Processos & Sistemas" : "Redação Oficial") as Category,
+    category: (catMap[row.category] ?? "Outros") as Category,
     hasCanva: !!row.canva_embed,
     hasPDF: !!row.pdf_url,
     description: row.description || "",
@@ -81,22 +86,16 @@ function cleanCanvaUrl(url: string | null): string {
   return target;
 }
 
-/* ═══ Mock Data (fallback) ═══ */
+/* ═══ Mock Data (fallback — substituído pelos dados reais do Supabase) ═══ */
 const MOCK_SUBTEMAS: Subtema[] = [
-  // 1. Redação Oficial (Redação Oficial)
-  { id: "red-b", name: "Redação Oficial e Memorandos", level: "Bronze", hours: 1.0, category: "Redação Oficial", hasCanva: true, hasPDF: false },
-  { id: "red-p", name: "Redação Oficial e Ofícios", level: "Prata",  hours: 2.0, category: "Redação Oficial", hasCanva: true, hasPDF: true  },
-  { id: "red-o", name: "Elaboração de Pareceres Técnicos", level: "Ouro",   hours: 3.0, category: "Redação Oficial", hasCanva: true, hasPDF: true  },
+  // Coordenação
+  { id: "b3-coord",   name: "Coordenação de Bombeiros Comunitários — Parâmetros Gerais", level: "Bronze", hours: 2.0, category: "Coordenação",       hasCanva: false, hasPDF: false },
 
-  // 2. Processos & Sistemas (Processos & Sistemas)
-  { id: "sys-b", name: "Introdução ao Sistema SIGAD", level: "Bronze", hours: 1.0, category: "Processos & Sistemas", hasCanva: true, hasPDF: false },
-  { id: "sys-p", name: "Tramitação e Despacho no SIGAD", level: "Prata",  hours: 2.0, category: "Processos & Sistemas", hasCanva: true, hasPDF: true  },
-  { id: "sys-o", name: "Processos de Licitação no CBMSC", level: "Ouro",   hours: 3.0, category: "Processos & Sistemas", hasCanva: true, hasPDF: true  },
-
-  // 3. Legislação & Normas (Legislação & Normas)
-  { id: "leg-b", name: "Estatuto dos Militares Estaduais", level: "Bronze", hours: 1.0, category: "Legislação & Normas", hasCanva: true, hasPDF: false },
-  { id: "leg-p", name: "Regulamento Disciplinar (RDPMSC)", level: "Prata",  hours: 1.5, category: "Legislação & Normas", hasCanva: true, hasPDF: true  },
-  { id: "leg-o", name: "Instruções Técnicas da DAT", level: "Ouro",   hours: 2.5, category: "Legislação & Normas", hasCanva: true, hasPDF: true  },
+  // Gestão de Pessoal
+  { id: "b3-ficha",   name: "Ficha de Apuração de Conduta",  level: "Bronze", hours: 1.5, category: "Gestão de Pessoal", hasCanva: false, hasPDF: false },
+  { id: "b3-escala",  name: "Escalas de Serviço",           level: "Bronze", hours: 1.5, category: "Gestão de Pessoal", hasCanva: false, hasPDF: false },
+  { id: "b3-treino",  name: "Treinamentos Operacionais",    level: "Prata",  hours: 2.0, category: "Gestão de Pessoal", hasCanva: false, hasPDF: false },
+  { id: "b3-gestao",  name: "Gestão de Pessoal",           level: "Prata",  hours: 2.0, category: "Gestão de Pessoal", hasCanva: false, hasPDF: false },
 ];
 
 /* ═══ Design Tokens ═══ */
@@ -119,12 +118,12 @@ const levelConfig: Record<Level, { badge: string; dot: string; label: string }> 
 };
 
 const categoryConfig: Record<Category, { color: string; icon: any }> = {
-  "Redação Oficial":      { color: "text-emerald-400", icon: FileText },
-  "Processos & Sistemas": { color: "text-sky-400",     icon: Layers },
-  "Legislação & Normas":   { color: "text-orange-400", icon: ShieldPlus },
+  "Coordenação":       { color: "text-primary",    icon: ShieldPlus },
+  "Gestão de Pessoal": { color: "text-sky-400",    icon: Layers },
+  "Outros":            { color: "text-orange-400", icon: FileText },
 };
 
-const categories: Category[] = ["Redação Oficial", "Processos & Sistemas", "Legislação & Normas"];
+const categories: Category[] = ["Coordenação", "Gestão de Pessoal", "Outros"];
 const levels: Level[] = ["Bronze", "Prata", "Ouro"];
 
 /* ═══ Component ═══ */
@@ -158,7 +157,7 @@ export default function SubtemasPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createHours, setCreateHours] = useState(1);
-  const [createCategory, setCreateCategory] = useState<Category>("Redação Oficial");
+  const [createCategory, setCreateCategory] = useState<Category>("Gestão de Pessoal");
   const [createLevel, setCreateLevel] = useState<Level>("Bronze");
   const [createDescription, setCreateDescription] = useState("");
   const [createSyllabus, setCreateSyllabus] = useState("");
@@ -168,7 +167,7 @@ export default function SubtemasPage() {
   const handleOpenCreate = () => {
     setCreateName("");
     setCreateHours(1);
-    setCreateCategory("Redação Oficial");
+    setCreateCategory("Gestão de Pessoal");
     setCreateLevel("Bronze");
     setCreateDescription("");
     setCreateSyllabus("");
@@ -694,9 +693,9 @@ export default function SubtemasPage() {
                     onChange={(e) => setEditCategory(e.target.value as Category)}
                     className="w-full h-10 px-2 rounded-lg bg-surface border border-border text-xs text-foreground focus:outline-none"
                   >
-                    <option value="Redação Oficial">Redação Oficial</option>
-                    <option value="Processos & Sistemas">Processos & Sistemas</option>
-                    <option value="Legislação & Normas">Legislação & Normas</option>
+                    <option value="Coordenação">Coordenação</option>
+                    <option value="Gestão de Pessoal">Gestão de Pessoal</option>
+                    <option value="Outros">Outros</option>
                   </select>
                 </div>
 

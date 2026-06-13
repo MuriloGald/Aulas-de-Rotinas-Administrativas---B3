@@ -146,7 +146,7 @@ export default function SubtemasPage() {
   const [editingSubtheme, setEditingSubtheme] = useState<Subtema | null>(null);
   const [editName, setEditName] = useState("");
   const [editHours, setEditHours] = useState(1);
-  const [editCategory, setEditCategory] = useState<Category>("Redação Oficial");
+  const [editCategory, setEditCategory] = useState<Category>("Coordenação");
   const [editLevel, setEditLevel] = useState<Level>("Bronze");
   const [editDescription, setEditDescription] = useState("");
   const [editSyllabus, setEditSyllabus] = useState("");

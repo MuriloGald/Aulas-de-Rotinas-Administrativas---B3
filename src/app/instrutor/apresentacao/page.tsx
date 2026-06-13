@@ -514,7 +514,7 @@ function UnifiedApresentacaoPageContent() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const mapped: Subtheme[] = data.map((row: any, i) => ({
+        const mapped: Subtheme[] = data.map((row: any, i: number) => ({
           id: row.subtheme.id,
           title: row.subtheme.name,
           duration: `${row.subtheme.hours}h`,
@@ -559,7 +559,7 @@ function UnifiedApresentacaoPageContent() {
           .from("classes")
           .update({ active_subtheme_id: subthemeId })
           .eq("id", activeClass.id)
-          .then(({ error }) => {
+          .then(({ error }: any) => {
             if (error) console.error("Erro ao sincronizar subtema no Supabase:", error);
           });
       }
@@ -573,7 +573,7 @@ function UnifiedApresentacaoPageContent() {
         .from("classes")
         .update({ interaction_mode: interactionMode })
         .eq("id", activeClass.id)
-        .then(({ error }) => {
+        .then(({ error }: any) => {
           if (error) console.error("Erro ao atualizar modo de interação no Supabase:", error);
         });
     }

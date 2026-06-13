@@ -327,7 +327,7 @@ export default function SubtemasPage() {
       .from("subthemes")
       .select("*")
       .order("category")
-      .then(({ data, error }) => {
+      .then(({ data, error }: any) => {
         if (!error && data && data.length > 0) {
           setSubtemas((data as DBSubtheme[]).map(fromDB));
         }

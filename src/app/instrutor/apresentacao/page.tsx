@@ -410,7 +410,10 @@ const SPEAKER_NOTES: Record<string, Record<number, { title: string; speech: stri
 const SLIDE_TARGETS_CUMULATIVE = [45, 90, 135, 180, 225, 270, 315, 360, 395, 420, 440];
 
 function UnifiedApresentacaoPageContent() {
-  const supabase = createClient();
+  // Inicialização lazy: createClient só é chamado no browser (nunca durante SSR/build),
+  // evitando falha quando as env vars ainda não estão presentes.
+  const supabaseRef = useRef(typeof window !== "undefined" ? createClient() : null);
+  const supabase = supabaseRef.current!;
   const router = useRouter();
   const searchParams = useSearchParams();
   const classIdParam = searchParams.get("classId");

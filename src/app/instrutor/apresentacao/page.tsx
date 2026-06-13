@@ -89,12 +89,13 @@ interface Training {
 
 interface ClassFromDB {
   id: string;
+  name?: string | null;
   status: "agendada" | "em_andamento" | "concluida" | "cancelada";
   qr_code_token: string;
   scheduled_at: string;
   started_at: string | null;
-  company: Company;
-  training: Training;
+  company?: Company | null;
+  training?: Training | null;
   interaction_mode?: boolean;
   active_subtheme_id?: string | null;
 }
@@ -478,9 +479,7 @@ function UnifiedApresentacaoPageContent() {
       const { data, error } = await supabase
         .from("classes")
         .select(`
-          id, status, qr_code_token, scheduled_at, started_at,
-          company:companies(name),
-          training:trainings(id, name, total_hours)
+          id, name, status, qr_code_token, scheduled_at, started_at, active_subtheme_id, interaction_mode
         `)
         .in("status", ["agendada", "em_andamento"])
         .order("scheduled_at", { ascending: true });
@@ -499,24 +498,24 @@ function UnifiedApresentacaoPageContent() {
   }, [fetchClasses]);
 
   /* ═══ Fetch Subthemes when Class Selected ═══ */
-  const fetchSubthemes = useCallback(async (trainingId: string) => {
+  const fetchSubthemes = useCallback(async (classId: string) => {
     setLoadingSubthemes(true);
     try {
       const { data, error } = await supabase
-        .from("training_subthemes")
+        .from("class_subthemes")
         .select(`
-          sort_order, is_mandatory,
+          order_index,
           subtheme:subthemes(id, name, hours, level, category, canva_embed, description)
         `)
-        .eq("training_id", trainingId)
-        .order("sort_order", { ascending: true });
+        .eq("class_id", classId)
+        .order("order_index", { ascending: true });
 
       if (error) throw error;
 
       if (data && data.length > 0) {
         const mapped: Subtheme[] = data.map((row: any, i: number) => ({
           id: row.subtheme.id,
-          title: row.subtheme.name,
+          title: row.subtheme.name ?? "Sem título",
           duration: `${row.subtheme.hours}h`,
           completed: i < activeIndex,
           canva_embed: row.subtheme.canva_embed,
@@ -537,7 +536,7 @@ function UnifiedApresentacaoPageContent() {
 
   useEffect(() => {
     if (activeClass) {
-      fetchSubthemes(activeClass.training.id);
+      fetchSubthemes(activeClass.id);
 
       if (activeClass.started_at) {
         const start = new Date(activeClass.started_at).getTime();
@@ -2101,9 +2100,9 @@ function UnifiedApresentacaoPageContent() {
                       className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-primary/40 hover:bg-white/[0.04] transition-all duration-300 flex items-center justify-between cursor-pointer group text-left"
                     >
                       <div className="min-w-0 flex-1 pr-3">
-                        <h4 className="text-sm font-bold text-white truncate">{cls.company?.name || "Batalhão / Seção"}</h4>
+                        <h4 className="text-sm font-bold text-white truncate">{cls.name || cls.company?.name || "Turma B3"}</h4>
                         <div className="text-xs text-gray-400 flex items-center gap-2 mt-1">
-                          <span className="truncate">{cls.training?.name}</span>
+                          <span className="truncate">{cls.training?.name || "Rotinas Administrativas B3"}</span>
                           {cls.scheduled_at && (
                             <>
                               <span className="w-1 h-1 rounded-full bg-gray-600 flex-shrink-0" />
@@ -2162,7 +2161,7 @@ function UnifiedApresentacaoPageContent() {
           <div className="space-y-3">
             <h2 className="text-2xl font-bold text-foreground">Aguardando Início da Aula</h2>
             <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-              Você selecionou a turma da empresa **{activeClass.company?.name}** para o treinamento **{activeClass.training?.name}**.
+              Você selecionou a turma **{activeClass.name || "Turma B3"}** para a matéria **{activeClass.training?.name || "Rotinas Administrativas B3"}**.
               <br />
               Clique no botão abaixo para dar início oficial. Isso notificará o sistema e abrirá o roteiro do apresentador Canva.
             </p>
@@ -2170,16 +2169,18 @@ function UnifiedApresentacaoPageContent() {
 
           <div className="p-4 rounded-xl bg-surface border border-border/50 text-left space-y-2.5 max-w-sm mx-auto">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Empresa:</span>
-              <span className="font-semibold text-foreground">{activeClass.company?.name}</span>
+              <span>Turma:</span>
+              <span className="font-semibold text-foreground">{activeClass.name || "Turma B3"}</span>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Curso:</span>
-              <span className="font-semibold text-foreground">{activeClass.training?.name}</span>
+              <span>Matéria:</span>
+              <span className="font-semibold text-foreground">{activeClass.training?.name || "Rotinas Administrativas B3"}</span>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Carga Horária:</span>
-              <span className="font-semibold text-foreground">{activeClass.training?.total_hours} horas</span>
+              <span className="font-semibold text-foreground">
+                {activeClass.training?.total_hours || (subthemes.reduce((acc, s) => acc + parseFloat(s.duration || "0"), 0)) || 9} horas
+              </span>
             </div>
           </div>
 
@@ -2220,10 +2221,10 @@ function UnifiedApresentacaoPageContent() {
 
           <div className="hidden md:flex items-center gap-2.5 px-3 py-1 rounded-lg bg-surface border border-border text-left">
             <Building2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-            <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{activeClass.company?.name}</span>
+            <span className="text-xs font-bold text-foreground truncate max-w-[150px]">{activeClass.name || activeClass.company?.name || "Turma B3"}</span>
             <span className="text-border flex-shrink-0">|</span>
             <GraduationCap className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-            <span className="text-xs font-semibold text-muted-foreground truncate max-w-[200px]">{activeClass.training?.name}</span>
+            <span className="text-xs font-semibold text-muted-foreground truncate max-w-[200px]">{activeClass.training?.name || "Rotinas Administrativas B3"}</span>
           </div>
         </div>
 
